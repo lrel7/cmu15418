@@ -33,6 +33,7 @@ struct __cmu418_mask : __cmu418_vec<bool> {};
 //***********************
 
 // Return a mask initialized to 1 in the first N lanes and 0 in the others
+// By default to be all 1
 __cmu418_mask _cmu418_init_ones(int first = VECTOR_WIDTH);
 
 // Return the inverse of maska
@@ -103,6 +104,8 @@ void _cmu418_vgt_int(__cmu418_mask &vecResult, __cmu418_vec_int &veca, __cmu418_
 
 // Return a mask of (veca < vecb) if vector lane active
 //  otherwise keep the old value
+// Note: the 1st line means that if veca < vecb at some position i
+// then the position i should be 1, otherwise it should be 0
 void _cmu418_vlt_float(__cmu418_mask &vecResult, __cmu418_vec_float &veca, __cmu418_vec_float &vecb, __cmu418_mask &mask);
 void _cmu418_vlt_int(__cmu418_mask &vecResult, __cmu418_vec_int &veca, __cmu418_vec_int &vecb, __cmu418_mask &mask);
 

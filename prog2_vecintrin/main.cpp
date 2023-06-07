@@ -176,7 +176,7 @@ void absSerial(float* values, float* output, int N) {
 // implementation of absolute value using 15418 instrinsics
 void absVector(float* values, float* output, int N) {
   __cmu418_vec_float x;
-  __cmu418_vec_float result;
+  __cmu418_vec_float result; // store temporary result
   __cmu418_vec_float zero = _cmu418_vset_float(0.f);
   __cmu418_mask maskAll, maskIsNegative, maskIsNotNegative;
 
@@ -195,6 +195,7 @@ void absVector(float* values, float* output, int N) {
     _cmu418_vload_float(x, values+i, maskAll);               // x = values[i];
 
     // Set mask according to predicate
+    // Mark position i to 1 where x < 0
     _cmu418_vlt_float(maskIsNegative, x, zero, maskAll);     // if (x < 0) {
 
     // Execute instruction using mask ("if" clause)
@@ -238,11 +239,66 @@ void clampedExpSerial(float* values, int* exponents, float* output, int N) {
 
 void clampedExpVector(float* values, int* exponents, float* output, int N) {
   // TODO: Implement your vectorized version of clampedExpSerial here
+  __cmu418_vec_float x, result;
+  __cmu418_vec_int y;
+  __cmu418_mask maskVec, /*maskOrigin,*/ maskIsZero, maskIsNotZero, maskClamp;
+  __cmu418_mask maskAll = _cmu418_init_ones();
+  __cmu418_vec_int one = _cmu418_vset_int(1); // All 1 vector
+  __cmu418_vec_int zero = _cmu418_vset_int(0);
+  __cmu418_vec_float zero_f = _cmu418_vset_float(0.f);
+  __cmu418_vec_float clamp = _cmu418_vset_float(9.999999f);
 
   for (int i=0; i<N; i+=VECTOR_WIDTH) {
+    int count = VECTOR_WIDTH;
+    // Mask the active lanes of the vector with 1
+    maskVec = _cmu418_init_ones(N-i);
+    // maskOrigin = _cmu418_init_ones(N-i);
+    // Load vector of values from memory
+    _cmu418_vload_float(x, values+i, maskVec);
+    _cmu418_vload_int(y, exponents+i, maskVec);
+    result = _cmu418_vset_float(1.f); // Init result to 1
 
+    // Mask the zeros with 1
+    _cmu418_veq_float(maskIsZero, x, zero_f, maskVec);
+    // Mask the zeros with 0 in order to avoid them
+    maskIsZero = _cmu418_mask_not(maskIsZero);
+    maskVec = _cmu418_mask_and(maskVec, maskIsZero); 
+
+    // Calculate exponents
+    while(count > 0){
+      // Mask >0 in y with 1
+      _cmu418_vgt_int(maskIsNotZero, y, zero, maskAll);
+      // Mask zeros in y with 0
+      // maskIsNotZero = _cmu418_mask_not(maskIsNotZero);
+      // Now the 1 in maskIsNotZero indicates either the
+      // exponent hasn't turn to zero yet, or the exponent
+      // is invalid
+      // Use "and" to remove the invalid 1's
+      maskIsNotZero = _cmu418_mask_and(maskIsNotZero, maskVec);
+      maskVec = maskIsNotZero;
+      // Update count
+      count = _cmu418_cntbits(maskIsNotZero);
+      if(count == 0){
+        break;
+      }
+      // Multiply
+      _cmu418_vmult_float(result, result, x, maskVec);
+      // Decrement exponents
+      _cmu418_vsub_int(y, y, one, maskVec);
+      // printf("count = %d\n", count);
+    }
+
+    maskVec = _cmu418_init_ones(N-i);
+
+    // Clamp exponents
+    // Mask result > 9.999999f with 1
+    _cmu418_vgt_float(maskClamp, result, clamp, maskVec);
+    // Clamp those values to 9.999999f
+    _cmu418_vset_float(result, 9.999999f, maskClamp);
+
+    // Write results back to memory
+    _cmu418_vstore_float(output+i, result, maskVec);
   }
-
 }
 
 float arraySumSerial(float* values, int N) {
