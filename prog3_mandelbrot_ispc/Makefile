@@ -1,5 +1,7 @@
 CXX=g++ -m64
 CXXFLAGS=-I../common -Iobjs/ -O3 -Wall
+# CXXFLAGS += -I"C:/Program Files (x86)/Windows Kits/10/Include/10.0.10240.0/ucrt"
+# CXXFLAGS += -I"D:/Visual Studio/VC/Tools/MSVC/14.33.31629/include"
 ISPC=ispc
 # note: change target to avx-x2 for AVX capable machines
 ISPCFLAGS=-O2 --target=sse4-x2 --arch=x86-64
@@ -21,9 +23,8 @@ default: $(APP_NAME)
 
 dirs:
 		/bin/mkdir -p $(OBJDIR)/
-
 clean:
-		/bin/rm -rf $(OBJDIR) *.ppm *~ $(APP_NAME)
+		/bin/rm -rf $(OBJDIR) *.ppm *~ $(APP_NAME)	
 
 OBJS=$(OBJDIR)/main.o $(OBJDIR)/mandelbrotSerial.o $(OBJDIR)/mandelbrot_ispc.o $(PPM_OBJ) $(TASKSYS_OBJ)
 
